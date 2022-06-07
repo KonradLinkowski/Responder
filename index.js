@@ -1,18 +1,29 @@
 const http = require('http')
+const url = require('url')
 
 const requests = []
 
 const server = http.createServer((req, res) => {
-  const data = []
-  req.on('data', d => data.push(d))
+  const chunks = []
+  req.on('data', d => chunks.push(d))
   req.on('end', () => {
-    const d = data.join('')
+    const { pathname, query } = url.parse(req.url, true)
+    const data = chunks.join('')
     requests.push({
+      redirect: query.r,
       url: req.url,
       headers: req.headers,
-      body: d
+      body: data
     })
-    res.end(JSON.stringify(requests))
+    if (pathname === '/' && query.r) {
+      return res.writeHead(302, {
+        'Location': query.r
+      }).end();
+    }
+    if (pathname === '/logs') {
+      return res.end(JSON.stringify(requests))
+    }
+    return res.writeHead(404).end();
   })
 })
 
